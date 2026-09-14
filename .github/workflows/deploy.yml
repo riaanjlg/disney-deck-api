@@ -1,0 +1,39 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [development]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push image
+        run: |
+          az acr build --registry ${{ vars.ACR_NAME }} \
+            --image ${{ vars.API_NAME }}:${{ github.sha }} .
+
+      - name: Update secrets and deploy
+        run: |
+          az containerapp secret set \
+            --name ${{ vars.API_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP }} \
+            --secrets mongodb-uri="${{ secrets.MONGODB_URI }}"
+
+          az containerapp update \
+            --name ${{ vars.API_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP }} \
+            --image ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.API_NAME }}:${{ github.sha }} \
+            --set-env-vars MONGODB_URI=secretref:mongodb-uri
