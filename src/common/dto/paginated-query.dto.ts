@@ -1,4 +1,4 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
@@ -17,10 +17,12 @@ export class PaginatedQueryDto {
 
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   pageNumber: number;
 
   @IsInt()
   @Min(1)
   @Max(100)
+  @Type(() => Number)
   pageSize: number;
 }
