@@ -1,2 +1,2 @@
-allowBuilds:
-  '@scarf/scarf': false
+onlyBuiltDependencies:
+  - '@scarf/scarf'
