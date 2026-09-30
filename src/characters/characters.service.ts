@@ -6,6 +6,7 @@ import { CharacterResponseDto } from './dto/characters-response.dto.js';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto.js';
 import { PaginatedQueryDto } from '../common/dto/paginated-query.dto.js';
 import { DisneyApiCharacter } from '../polling/disney-api.interfaces.js';
+import { isLooseMatch } from '../common/utils/loose-match.js';
 
 @Injectable()
 export class CharactersService {
@@ -22,13 +23,7 @@ export class CharactersService {
     const query: Record<string, any> = {};
 
     if (searchTerm) {
-      query.$or = [
-        { name: { $regex: searchTerm, $options: 'i' } },
-        { films: { $regex: searchTerm, $options: 'i' } },
-        { shortFilms: { $regex: searchTerm, $options: 'i' } },
-        { tvShows: { $regex: searchTerm, $options: 'i' } },
-        { videoGames: { $regex: searchTerm, $options: 'i' } },
-      ];
+      query.$or = [{ name: { $regex: searchTerm, $options: 'i' } }];
     }
 
     const skip = (pageNumber - 1) * pageSize;
@@ -47,6 +42,11 @@ export class CharactersService {
     };
   }
 
+  async findNames(): Promise<string[]> {
+    const names = await this.characterModel.distinct('name');
+    return names.filter(Boolean).sort((a, b) => a.localeCompare(b));
+  }
+
   async findOne(id: string): Promise<Character> {
     const foundCharacter = await this.characterModel.findById(id).lean().exec();
 
@@ -55,6 +55,27 @@ export class CharactersService {
     }
 
     return foundCharacter;
+  }
+
+  async findRandom(): Promise<Character> {
+    const result = await this.characterModel.aggregate([
+      { $sample: { size: 1 } },
+    ]);
+
+    return result[0];
+  }
+
+  async checkGuess(id: string, name: string): Promise<boolean> {
+    const foundCharacter = await this.characterModel
+      .findById(id)
+      .select('name')
+      .lean();
+
+    if (!foundCharacter) {
+      throw new NotFoundException(`Character with id ${id} not found`);
+    }
+
+    return isLooseMatch(name, foundCharacter.name);
   }
 
   async upsertMany(characters: DisneyApiCharacter[]): Promise<number> {
