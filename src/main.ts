@@ -32,7 +32,10 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173',
+      'https://disney-deck-ui.kindocean-557a9db1.southafricanorth.azurecontainerapps.io',
+    ],
   });
 
   const configService = app.get(ConfigService);
