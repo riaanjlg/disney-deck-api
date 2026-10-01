@@ -20,10 +20,23 @@ export class CharactersService {
   ): Promise<PaginatedResponse<Character>> {
     const { searchTerm, pageNumber, pageSize } = paginatedQueryDto;
 
-    const query: Record<string, any> = {};
+    const listFilter = {
+      $or: [
+        { films: { $exists: true, $not: { $size: 0 } } },
+        { shortFilms: { $exists: true, $not: { $size: 0 } } },
+        { tvShows: { $exists: true, $not: { $size: 0 } } },
+        { videoGames: { $exists: true, $not: { $size: 0 } } },
+      ],
+    };
+
+    const query: Record<string, any> = {
+      $and: [listFilter],
+    };
 
     if (searchTerm) {
-      query.$or = [{ name: { $regex: searchTerm, $options: 'i' } }];
+      query.$and.push({
+        $or: [{ name: { $regex: searchTerm, $options: 'i' } }],
+      });
     }
 
     const skip = (pageNumber - 1) * pageSize;
@@ -58,7 +71,17 @@ export class CharactersService {
   }
 
   async findRandom(): Promise<Character> {
+    const listFilter = {
+      $or: [
+        { films: { $exists: true, $not: { $size: 0 } } },
+        { shortFilms: { $exists: true, $not: { $size: 0 } } },
+        { tvShows: { $exists: true, $not: { $size: 0 } } },
+        { videoGames: { $exists: true, $not: { $size: 0 } } },
+      ],
+    };
+
     const result = await this.characterModel.aggregate([
+      { $match: listFilter },
       { $sample: { size: 1 } },
     ]);
 
